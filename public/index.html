@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokédex Binder Sorter</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+    <div class="header-bar">
+        <h1> Pokédex Binder Sorter</h1>
+        <div class="menu-container">
+            <button id="menuToggle" class="menu-toggle" aria-label="Menu">☰</button>
+            <div id="menuDropdown" class="menu-dropdown hidden">
+                <div class="menu-pages">
+                    <label for="menuPages">Pages:</label>
+                    <input type="number" id="menuPages" min="1" max="200" value="35">
+                    <button id="applyPages">Update</button>
+                </div>
+                <button id="clearData">🗑 Clear All Data &amp; Start Over</button>
+            </div>
+        </div>
+    </div>
+        
+        <!-- Setup Section -->
+        <section id="setup" class="setup-section">
+            <h2>Setup Your Binder</h2>
+            <div class="setup-controls">
+                <div class="control-group">
+                    <label for="rows">Rows:</label>
+                    <input type="number" id="rows" min="1" max="10" value="3">
+                </div>
+                <div class="control-group">
+                    <label for="columns">Columns:</label>
+                    <input type="number" id="columns" min="1" max="10" value="3">
+                </div>
+                <div class="control-group">
+                    <label for="pages">Pages:</label>
+                    <input type="number" id="pages" min="1" max="200" value="35">
+                </div>
+                <button id="applySettings">Apply Settings</button>
+            </div>
+        </section>
+
+        <!-- Search Section -->
+        <section id="search" class="search-section hidden">
+            <div class="search-controls">
+                <input type="text" id="searchInput" placeholder="Search by name or Pokédex number..." autocomplete="off">
+                <button id="addSelected">Add Selected</button>
+            </div>
+            <div id="searchResults" class="search-results hidden"></div>
+        </section>
+
+        <!-- Binder Section -->
+        <section id="binder" class="binder-section hidden">
+
+            <div class="binder-navigation binder-nav-top">
+                <button id="prevPageTop">Previous</button>
+                <button id="nextPageTop">Next</button>
+            </div>
+            <div id="binderSpread" class="binder-spread"></div>
+            <div class="binder-navigation">
+                <button id="prevPage">Previous</button>
+                <button id="nextPage">Next</button>
+            </div>
+        </section>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
