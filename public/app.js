@@ -1,10 +1,10 @@
 let pokedexData = [];
 let rows = 3;
 let columns = 3;
-let pages = 35;
+let pages = 40;
 let spreadStart = 1;
 let totalPages = 1;
-let binderSlots = []; 
+let binderSlots = [];
 let selectedPokemon = null;
 
 fetch('/api/pokedex')
@@ -16,7 +16,7 @@ fetch('/api/pokedex')
       binderSlots = saved.binderSlots;
       rows = saved.rows;
       columns = saved.columns;
-      pages = saved.pages || 35;
+      pages = saved.pages || 40;
       const capacity = pages * rows * columns;
       if (binderSlots.length < capacity) {
         binderSlots = [...binderSlots, ...new Array(capacity - binderSlots.length).fill(null)];
@@ -76,9 +76,9 @@ function glowCard(slotIndex) {
   if (!pokemon) return;
   const t1 = pokemon.type1.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
   const typeColor = getComputedStyle(document.documentElement).getPropertyValue(`--type-${t1}`).trim();
-  const r = parseInt(typeColor.slice(1,3), 16);
-  const g = parseInt(typeColor.slice(3,5), 16);
-  const b = parseInt(typeColor.slice(5,7), 16);
+  const r = parseInt(typeColor.slice(1, 3), 16);
+  const g = parseInt(typeColor.slice(3, 5), 16);
+  const b = parseInt(typeColor.slice(5, 7), 16);
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       const card = document.querySelector(`.binder-slot[data-index="${slotIndex}"]`);
@@ -210,14 +210,14 @@ $('clearData').addEventListener('click', () => {
   localStorage.removeItem('pokedex-binder');
   binderSlots = [];
   spreadStart = 1;
-  pages = 35;
+  pages = 40;
   $('setup').classList.remove('hidden');
   $('search').classList.add('hidden');
   $('binder').classList.add('hidden');
   $('rows').value = 3;
   $('columns').value = 3;
-  $('pages').value = 35;
-  $('menuPages').value = 35;
+  $('pages').value = 40;
+  $('menuPages').value = 40;
   $('searchInput').value = '';
   $('searchResults').innerHTML = '';
   $('menuDropdown').classList.add('hidden');
