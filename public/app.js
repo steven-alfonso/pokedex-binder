@@ -99,7 +99,9 @@ function handleResultClick(num, inBinder) {
   if (inBinder) {
     selectedPokemon = null;
     const page = Math.floor((num - 1) / perPage) + 1;
-    if (page === 1) {
+    if (isMobileLayout()) {
+      spreadStart = page;
+    } else if (page === 1) {
       spreadStart = 1;
     } else if (page % 2 === 0) {
       spreadStart = page;
@@ -129,7 +131,9 @@ function addSelectedPokemon() {
   const perPage = rows * columns;
   const page = Math.floor(slotIndex / perPage) + 1;
 
-  if (page === 1) {
+  if (isMobileLayout()) {
+    spreadStart = page;
+  } else if (page === 1) {
     spreadStart = 1;
   } else if (page % 2 === 0) {
     spreadStart = page;
@@ -176,22 +180,32 @@ $('searchResults').addEventListener('keydown', (e) => {
 $('addSelected').addEventListener('click', addSelectedPokemon);
 
 function goPrevPage() {
-  if (spreadStart === 1) return;
-  if (spreadStart === 2) {
-    spreadStart = 1;
+  if (isMobileLayout()) {
+    if (spreadStart <= 1) return;
+    spreadStart -= 1;
   } else {
-    spreadStart -= 2;
+    if (spreadStart === 1) return;
+    if (spreadStart === 2) {
+      spreadStart = 1;
+    } else {
+      spreadStart -= 2;
+    }
   }
   renderBinderPage();
 }
 
 function goNextPage() {
-  const rightMost = spreadStart === 1 ? 1 : Math.min(spreadStart + 1, totalPages);
-  if (rightMost >= totalPages) return;
-  if (spreadStart === 1) {
-    spreadStart = 2;
+  if (isMobileLayout()) {
+    if (spreadStart >= totalPages) return;
+    spreadStart += 1;
   } else {
-    spreadStart += 2;
+    const rightMost = spreadStart === 1 ? 1 : Math.min(spreadStart + 1, totalPages);
+    if (rightMost >= totalPages) return;
+    if (spreadStart === 1) {
+      spreadStart = 2;
+    } else {
+      spreadStart += 2;
+    }
   }
   renderBinderPage();
 }
@@ -317,31 +331,66 @@ function renderPage(pageNum) {
   return html;
 }
 
+const edgeVars = [
+  'var(--page-edge-1)', 'var(--page-edge-2)', 'var(--page-edge-3)',
+  'var(--page-edge-4)', 'var(--page-edge-5)'
+];
+
+function pageEdgeStyle(side, layers) {
+  if (layers <= 0) return 'box-shadow:none';
+  const dir = side === 'left' ? -1 : 1;
+  const parts = [];
+  const n = Math.min(layers, 5);
+  for (let i = 0; i < n; i++) {
+    const px = i + 1;
+    parts.push(`${dir * px}px 0 0 0 ${edgeVars[i]}`);
+  }
+  return 'box-shadow:' + parts.join(',');
+}
+
+function isMobileLayout() {
+  return window.innerWidth <= 768;
+}
+
 function renderBinderPage() {
   const perPage = rows * columns;
   const spread = $('binderSpread');
   totalPages = Math.max(pages, Math.ceil(binderSlots.length / perPage));
 
+  const mobile = isMobileLayout();
   let leftPage = null, rightPage = null;
-  if (spreadStart === 1) {
-    rightPage = 1;
-  } else {
-    leftPage = spreadStart;
-    rightPage = spreadStart + 1 <= totalPages ? spreadStart + 1 : null;
-  }
 
-  let html = '';
-  if (leftPage) {
-    html += `<div class="binder-page-wrap"><div class="page-label">${leftPage}</div><div class="binder-page" style="grid-template-columns: repeat(${columns}, 1fr)">${renderPage(leftPage)}</div></div>`;
+  if (mobile) {
+    rightPage = Math.min(spreadStart, totalPages);
+    let html = '<div class="book">';
+    html += `<div class="binder-page-wrap"><div class="binder-page" style="grid-template-columns: repeat(${columns}, 1fr)">${renderPage(rightPage)}</div><div class="page-label">${rightPage}</div></div>`;
+    html += '</div>';
+    spread.innerHTML = html;
   } else {
-    html += `<div class="binder-page-wrap"></div>`;
+    if (spreadStart === 1) {
+      rightPage = 1;
+    } else {
+      leftPage = spreadStart;
+      rightPage = spreadStart + 1 <= totalPages ? spreadStart + 1 : null;
+    }
+
+    const leftLayers = leftPage ? Math.min(Math.ceil((leftPage - 1) / 2), 5) : 0;
+    const rightLayers = rightPage ? Math.min(Math.ceil((totalPages - rightPage) / 2), 5) : 0;
+
+    let html = '<div class="book">';
+    if (leftPage) {
+      html += `<div class="binder-page-wrap" style="${pageEdgeStyle('left', leftLayers)}"><div class="binder-page" style="grid-template-columns: repeat(${columns}, 1fr)">${renderPage(leftPage)}</div><div class="page-label">${leftPage}</div></div>`;
+    } else {
+      html += `<div class="binder-page-wrap is-cover"></div>`;
+    }
+    if (rightPage) {
+      html += `<div class="binder-page-wrap" style="${pageEdgeStyle('right', rightLayers)}"><div class="binder-page" style="grid-template-columns: repeat(${columns}, 1fr)">${renderPage(rightPage)}</div><div class="page-label">${rightPage}</div></div>`;
+    } else {
+      html += `<div class="binder-page-wrap"></div>`;
+    }
+    html += '</div>';
+    spread.innerHTML = html;
   }
-  if (rightPage) {
-    html += `<div class="binder-page-wrap"><div class="page-label">${rightPage}</div><div class="binder-page" style="grid-template-columns: repeat(${columns}, 1fr)">${renderPage(rightPage)}</div></div>`;
-  } else {
-    html += `<div class="binder-page-wrap"></div>`;
-  }
-  spread.innerHTML = html;
 
   spread.querySelectorAll('.remove-btn').forEach(el => {
     el.addEventListener('click', (e) => {
@@ -355,7 +404,7 @@ function renderBinderPage() {
 
   $('prevPage').disabled = spreadStart <= 1;
   $('prevPageTop').disabled = spreadStart <= 1;
-  const rightMost = spreadStart === 1 ? 1 : (rightPage || leftPage);
+  const rightMost = mobile ? spreadStart : (spreadStart === 1 ? 1 : (rightPage || leftPage));
   $('nextPage').disabled = rightMost >= totalPages;
   $('nextPageTop').disabled = rightMost >= totalPages;
 }
