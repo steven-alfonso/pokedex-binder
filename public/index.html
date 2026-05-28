@@ -10,15 +10,23 @@
     <div class="container">
     <div class="header-bar">
         <h1> Pokédex Binder Sorter</h1>
-        <div class="menu-container">
-            <button id="menuToggle" class="menu-toggle" aria-label="Menu">☰</button>
-            <div id="menuDropdown" class="menu-dropdown hidden">
-                <div class="menu-pages">
-                    <label for="menuPages">Pages:</label>
-                    <input type="number" id="menuPages" min="1" max="200" value="35">
-                    <button id="applyPages">Update</button>
+        <div class="header-right">
+            <span id="binderIdBadge" class="binder-id-badge hidden" title="Click to copy binder URL">ID: <span id="binderIdDisplay"></span></span>
+            <div class="menu-container">
+                <button id="menuToggle" class="menu-toggle" aria-label="Menu">☰</button>
+                <div id="menuDropdown" class="menu-dropdown hidden">
+                    <div class="menu-pages">
+                        <label for="menuPages">Pages:</label>
+                        <input type="number" id="menuPages" min="1" max="200" value="35">
+                        <button id="applyPages">Update</button>
+                    </div>
+                    <div class="menu-load">
+                        <label for="menuBinderId">Open Binder ID:</label>
+                        <input type="text" id="menuBinderId" maxlength="6" placeholder="e.g. a1b2c3">
+                        <button id="menuLoadBinder">Load</button>
+                    </div>
+                    <button id="clearData">🗑 Clear All Data &amp; Start Over</button>
                 </div>
-                <button id="clearData">🗑 Clear All Data &amp; Start Over</button>
             </div>
         </div>
     </div>
@@ -40,6 +48,11 @@
                     <input type="number" id="pages" min="1" max="200" value="35">
                 </div>
                 <button id="applySettings">Apply Settings</button>
+            </div>
+            <div class="setup-load">
+                <label for="setupBinderId">Or open an existing binder:</label>
+                <input type="text" id="setupBinderId" maxlength="6" placeholder="Enter 6-character ID">
+                <button id="setupLoadBinder">Load Binder</button>
             </div>
         </section>
 

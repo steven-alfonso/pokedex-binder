@@ -11,6 +11,7 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "better-sqlite3": "^12.10.0",
     "express": "^5.2.1"
   }
 }

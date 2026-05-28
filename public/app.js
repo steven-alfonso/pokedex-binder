@@ -1,4 +1,5 @@
 let pokedexData = [];
+let binderId = null;
 let rows = 3;
 let columns = 3;
 let pages = 40;
@@ -7,34 +8,131 @@ let totalPages = 1;
 let binderSlots = [];
 let selectedPokemon = null;
 
+const $ = id => document.getElementById(id);
+
 fetch('/api/pokedex')
   .then(res => res.json())
   .then(data => {
     pokedexData = data;
-    const saved = loadBinder();
-    if (saved) {
-      binderSlots = saved.binderSlots;
-      rows = saved.rows;
-      columns = saved.columns;
-      pages = saved.pages || 40;
-      const capacity = pages * rows * columns;
-      if (binderSlots.length < capacity) {
-        binderSlots = [...binderSlots, ...new Array(capacity - binderSlots.length).fill(null)];
+    const params = new URLSearchParams(window.location.search);
+    const idFromUrl = params.get('id');
+
+    if (idFromUrl) {
+      fetch('/api/binder/' + encodeURIComponent(idFromUrl))
+        .then(res => {
+          if (!res.ok) throw new Error('Not found');
+          return res.json();
+        })
+        .then(state => {
+          binderId = idFromUrl;
+          applyServerState(state);
+          updateIdBadge();
+        })
+        .catch(() => {
+          showToast('Binder not found — creating a new one');
+          createNewBinder(true);
+        });
+    } else {
+      const saved = loadLocalBinder();
+      if (saved) {
+        migrateLocalBinder(saved);
+      } else {
+        createNewBinder();
       }
-      $('rows').value = rows;
-      $('columns').value = columns;
-      $('pages').value = pages;
-      $('menuPages').value = pages;
-      $('setup').classList.add('hidden');
-      $('search').classList.remove('hidden');
-      $('binder').classList.remove('hidden');
-      spreadStart = 1;
-      renderBinderPage();
     }
   })
   .catch(err => console.error('Failed to load Pokédex:', err));
 
-const $ = id => document.getElementById(id);
+function applyServerState(state) {
+  binderSlots = state.binderSlots || [];
+  rows = state.rows || 3;
+  columns = state.columns || 3;
+  pages = state.pages || 40;
+  const capacity = pages * rows * columns;
+  if (binderSlots.length < capacity) {
+    binderSlots = [...binderSlots, ...new Array(capacity - binderSlots.length).fill(null)];
+  }
+  saveLocalBinder();
+  $('rows').value = rows;
+  $('columns').value = columns;
+  $('pages').value = pages;
+  $('menuPages').value = pages;
+  $('setup').classList.add('hidden');
+  $('search').classList.remove('hidden');
+  $('binder').classList.remove('hidden');
+  spreadStart = 1;
+  renderBinderPage();
+}
+
+function createNewBinder(showSetup) {
+  const defaultState = { binderSlots: [], rows: 3, columns: 3, pages: 40 };
+  fetch('/api/binder', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ state: defaultState })
+  })
+    .then(res => res.json())
+    .then(data => {
+      binderId = data.id;
+      updateIdBadge();
+      updateUrl(binderId);
+      saveLocalBinder();
+      if (!showSetup) {
+        $('setup').classList.remove('hidden');
+      }
+    })
+    .catch(err => console.error('Failed to create binder:', err));
+}
+
+function migrateLocalBinder(saved) {
+  const state = {
+    binderSlots: saved.binderSlots || [],
+    rows: saved.rows || 3,
+    columns: saved.columns || 3,
+    pages: saved.pages || 40
+  };
+  fetch('/api/binder', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ state })
+  })
+    .then(res => res.json())
+    .then(data => {
+      binderId = data.id;
+      updateUrl(binderId);
+      updateIdBadge();
+      applyServerState(state);
+      showToast('Migrated local binder to server — ID: ' + binderId);
+    })
+    .catch(err => console.error('Failed to migrate binder:', err));
+}
+
+function updateUrl(id) {
+  const url = new URL(window.location);
+  url.searchParams.set('id', id);
+  window.history.replaceState({}, '', url);
+}
+
+function updateIdBadge() {
+  const badge = $('binderIdBadge');
+  const display = $('binderIdDisplay');
+  if (binderId) {
+    display.textContent = binderId;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+$('binderIdBadge').addEventListener('click', () => {
+  if (!binderId) return;
+  const url = window.location.href;
+  navigator.clipboard.writeText(url).then(() => {
+    showToast('Binder URL copied to clipboard');
+  }).catch(() => {
+    showToast('ID: ' + binderId);
+  });
+});
 
 $('applySettings').addEventListener('click', () => {
   rows = parseInt($('rows').value, 10);
@@ -113,6 +211,7 @@ function handleResultClick(num, inBinder) {
     $('searchResults').classList.add('hidden');
     renderBinderPage();
     glowCard(num - 1);
+    $('searchInput').focus();
   } else {
     $('searchResults').querySelectorAll('.result-item').forEach(r => r.classList.remove('selected'));
     const el = $('searchResults').querySelector(`.result-item[data-number="${num}"]`);
@@ -151,6 +250,8 @@ function addSelectedPokemon() {
   $('searchResults').classList.add('hidden');
   renderBinderPage();
   glowCard(slotIndex);
+  $('searchInput').focus();
+  $('searchInput').select();
 }
 
 $('searchResults').addEventListener('click', (e) => {
@@ -225,16 +326,29 @@ $('clearData').addEventListener('click', () => {
   binderSlots = [];
   spreadStart = 1;
   pages = 40;
-  $('setup').classList.remove('hidden');
-  $('search').classList.add('hidden');
-  $('binder').classList.add('hidden');
-  $('rows').value = 3;
-  $('columns').value = 3;
-  $('pages').value = 40;
-  $('menuPages').value = 40;
-  $('searchInput').value = '';
-  $('searchResults').innerHTML = '';
-  $('menuDropdown').classList.add('hidden');
+  const defaultState = { binderSlots: [], rows: 3, columns: 3, pages: 40 };
+  fetch('/api/binder', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ state: defaultState })
+  })
+    .then(res => res.json())
+    .then(data => {
+      binderId = data.id;
+      updateUrl(binderId);
+      updateIdBadge();
+      $('menuDropdown').classList.add('hidden');
+      $('setup').classList.remove('hidden');
+      $('search').classList.add('hidden');
+      $('binder').classList.add('hidden');
+      $('rows').value = 3;
+      $('columns').value = 3;
+      $('pages').value = 40;
+      $('menuPages').value = 40;
+      $('searchInput').value = '';
+      $('searchResults').innerHTML = '';
+    })
+    .catch(err => console.error('Failed to create new binder:', err));
 });
 
 $('applyPages').addEventListener('click', () => {
@@ -263,6 +377,35 @@ document.addEventListener('click', (e) => {
   }
 });
 
+function loadBinderById(id) {
+  window.location.href = '?id=' + encodeURIComponent(id.toLowerCase());
+}
+
+$('setupLoadBinder').addEventListener('click', () => {
+  const id = $('setupBinderId').value.trim().toLowerCase();
+  if (!id) return;
+  loadBinderById(id);
+});
+
+$('setupBinderId').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    $('setupLoadBinder').click();
+  }
+});
+
+$('menuLoadBinder').addEventListener('click', () => {
+  const id = $('menuBinderId').value.trim().toLowerCase();
+  if (!id) return;
+  $('menuDropdown').classList.add('hidden');
+  loadBinderById(id);
+});
+
+$('menuBinderId').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    $('menuLoadBinder').click();
+  }
+});
+
 function showToast(message) {
   const existing = document.querySelector('.toast');
   if (existing) existing.remove();
@@ -279,14 +422,24 @@ function showToast(message) {
 }
 
 function saveBinder() {
-  try {
-    localStorage.setItem('pokedex-binder', JSON.stringify({ binderSlots, rows, columns, pages }));
-  } catch (e) {
-    // ignore storage errors
+  saveLocalBinder();
+  if (binderId) {
+    const state = { binderSlots, rows, columns, pages };
+    fetch('/api/binder/' + encodeURIComponent(binderId), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state)
+    }).catch(() => {});
   }
 }
 
-function loadBinder() {
+function saveLocalBinder() {
+  try {
+    localStorage.setItem('pokedex-binder', JSON.stringify({ binderSlots, rows, columns, pages }));
+  } catch (e) {}
+}
+
+function loadLocalBinder() {
   try {
     const raw = localStorage.getItem('pokedex-binder');
     return raw ? JSON.parse(raw) : null;
