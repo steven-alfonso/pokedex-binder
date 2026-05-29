@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const Database = require('better-sqlite3');
 
 const app = express();
-const PORT = 5001;
+const PORT = parseInt(process.env.PORT, 10) || 5001;
 
 const csvPath = path.join(__dirname, 'data', 'pokedex.csv');
 let pokedex = [];
@@ -26,7 +26,10 @@ try {
   process.exit(1);
 }
 
-const db = new Database(path.join(__dirname, 'data', 'binder.db'));
+const dbPath = process.env.BINDER_DB_PATH || path.join(__dirname, 'data', 'binder.db');
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 db.exec(`CREATE TABLE IF NOT EXISTS binder_states (
   id TEXT PRIMARY KEY,
