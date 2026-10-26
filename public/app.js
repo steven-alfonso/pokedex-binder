@@ -224,10 +224,17 @@ function addSelectedPokemon() {
   if (selectedPokemon === null) return;
   const slotIndex = selectedPokemon - 1;
   if (binderSlots[slotIndex] != null) return;
+
+  const perPage = rows * columns;
+  const capacity = pages * perPage;
+  const targetLength = Math.max(capacity, Math.ceil((slotIndex + 1) / perPage) * perPage);
+  if (binderSlots.length < targetLength) {
+    binderSlots = [...binderSlots, ...new Array(targetLength - binderSlots.length).fill(null)];
+  }
+
   binderSlots[slotIndex] = selectedPokemon;
   saveBinder();
 
-  const perPage = rows * columns;
   const page = Math.floor(slotIndex / perPage) + 1;
 
   if (isMobileLayout()) {
@@ -242,7 +249,8 @@ function addSelectedPokemon() {
 
   const slotOnPage = (slotIndex % perPage) + 1;
   const pokemon = pokedexData.find(p => p.number === selectedPokemon);
-  showToast(`${pokemon.name} added → Page ${page}, Slot ${slotOnPage}`);
+  const overflow = slotIndex >= capacity ? ` (overflow past your ${pages} pages)` : '';
+  showToast(`${pokemon.name} added → Page ${page}, Slot ${slotOnPage}${overflow}`);
 
   selectedPokemon = null;
   $('searchInput').value = '';
@@ -470,7 +478,7 @@ function renderPage(pageNum) {
       continue;
     }
     const num = binderSlots[idx];
-    if (num === null) {
+    if (num == null) {
       html += `<div class="binder-slot${isOutOfBounds ? ' out-of-bounds' : ''}">${isOutOfBounds ? '' : 'Empty'}</div>`;
       continue;
     }
